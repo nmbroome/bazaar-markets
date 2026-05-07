@@ -1,58 +1,98 @@
-import { DeployButton } from "@/components/deploy-button";
-import { EnvVarWarning } from "@/components/env-var-warning";
-import { AuthButton } from "@/components/auth-button";
-import { Hero } from "@/components/hero";
-import { ThemeSwitcher } from "@/components/theme-switcher";
-import { ConnectSupabaseSteps } from "@/components/tutorial/connect-supabase-steps";
-import { SignUpUserSteps } from "@/components/tutorial/sign-up-user-steps";
-import { hasEnvVars } from "@/lib/utils";
-import Link from "next/link";
 import { Suspense } from "react";
 
-export default function Home() {
-  return (
-    <main className="min-h-screen flex flex-col items-center">
-      <div className="flex-1 w-full flex flex-col gap-20 items-center">
-        <nav className="w-full flex justify-center border-b border-b-foreground/10 h-16">
-          <div className="w-full max-w-5xl flex justify-between items-center p-3 px-5 text-sm">
-            <div className="flex gap-5 items-center font-semibold">
-              <Link href={"/"}>Next.js Supabase Starter</Link>
-              <div className="flex items-center gap-2">
-                <DeployButton />
-              </div>
-            </div>
-            {!hasEnvVars ? (
-              <EnvVarWarning />
-            ) : (
-              <Suspense>
-                <AuthButton />
-              </Suspense>
-            )}
-          </div>
-        </nav>
-        <div className="flex-1 flex flex-col gap-20 max-w-5xl p-5">
-          <Hero />
-          <main className="flex-1 flex flex-col gap-6 px-4">
-            <h2 className="font-medium text-xl mb-4">Next steps</h2>
-            {hasEnvVars ? <SignUpUserSteps /> : <ConnectSupabaseSteps />}
-          </main>
-        </div>
+import { MarketCard } from "@/components/market-card";
+import { SiteShell } from "@/components/site-shell";
+import { createClient } from "@/lib/supabase/server";
+import type { Market, MarketPool } from "@/lib/types";
 
-        <footer className="w-full flex items-center justify-center border-t mx-auto text-center text-xs gap-8 py-16">
-          <p>
-            Powered by{" "}
-            <a
-              href="https://supabase.com/?utm_source=create-next-app&utm_medium=template&utm_term=nextjs"
-              target="_blank"
-              className="font-bold hover:underline"
-              rel="noreferrer"
-            >
-              Supabase
-            </a>
+type MarketRow = Market & { market_pools: MarketPool | MarketPool[] | null };
+
+function pickPool(row: MarketRow): MarketPool | null {
+  if (!row.market_pools) return null;
+  return Array.isArray(row.market_pools) ? row.market_pools[0] ?? null : row.market_pools;
+}
+
+export default function HomePage() {
+  return (
+    <SiteShell>
+      <div className="flex flex-col gap-10 py-8">
+        <header className="flex flex-col gap-2">
+          <h1 className="text-3xl font-semibold">Markets</h1>
+          <p className="text-sm text-muted-foreground">
+            Predict outcomes with gold. New users start with 1,000.
           </p>
-          <ThemeSwitcher />
-        </footer>
+        </header>
+
+        <Suspense fallback={<MarketsLoading />}>
+          <MarketsList />
+        </Suspense>
       </div>
-    </main>
+    </SiteShell>
+  );
+}
+
+async function MarketsList() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("markets")
+    .select("*, market_pools(*)")
+    .order("status", { ascending: true })
+    .order("closes_at", { ascending: true });
+
+  if (error) {
+    return (
+      <div className="text-sm text-destructive border border-destructive/30 rounded-md p-3">
+        Failed to load markets: {error.message}
+      </div>
+    );
+  }
+
+  const rows = (data ?? []) as MarketRow[];
+  const open = rows.filter((m) => m.status === "open");
+  const closed = rows.filter((m) => m.status === "closed");
+  const resolved = rows.filter((m) => m.status === "resolved" || m.status === "paid");
+  const cancelled = rows.filter((m) => m.status === "cancelled");
+
+  return (
+    <>
+      <Section title="Open" markets={open} emptyHint="No open markets right now." />
+      {closed.length > 0 && (
+        <Section title="Closed (awaiting resolution)" markets={closed} />
+      )}
+      {resolved.length > 0 && <Section title="Resolved" markets={resolved} />}
+      {cancelled.length > 0 && <Section title="Cancelled" markets={cancelled} />}
+    </>
+  );
+}
+
+function MarketsLoading() {
+  return (
+    <div className="text-sm text-muted-foreground">Loading markets…</div>
+  );
+}
+
+function Section({
+  title,
+  markets,
+  emptyHint,
+}: {
+  title: string;
+  markets: MarketRow[];
+  emptyHint?: string;
+}) {
+  if (markets.length === 0 && !emptyHint) return null;
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="text-lg font-medium">{title}</h2>
+      {markets.length === 0 ? (
+        <p className="text-sm text-muted-foreground">{emptyHint}</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {markets.map((m) => (
+            <MarketCard key={m.id} market={m} pool={pickPool(m)} />
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
