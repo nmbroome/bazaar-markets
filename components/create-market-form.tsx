@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import { createMarketAction, type AdminActionState } from "@/app/admin/_actions";
 import { Button } from "@/components/ui/button";
@@ -9,8 +9,17 @@ import { Label } from "@/components/ui/label";
 
 const initial: AdminActionState = { ok: false };
 
+// datetime-local has no timezone. Re-anchor it in the browser's TZ and emit ISO
+// so the server doesn't reinterpret the wall-clock time in its own timezone.
+function localInputToIso(local: string): string {
+  if (!local) return "";
+  const d = new Date(local);
+  return Number.isNaN(d.getTime()) ? "" : d.toISOString();
+}
+
 export function CreateMarketForm() {
   const [state, formAction, pending] = useActionState(createMarketAction, initial);
+  const [closesAtLocal, setClosesAtLocal] = useState("");
   return (
     <form action={formAction} className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
@@ -29,7 +38,14 @@ export function CreateMarketForm() {
       </div>
       <div className="flex flex-col gap-1">
         <Label htmlFor="closesAt">Closes at</Label>
-        <Input id="closesAt" name="closesAt" type="datetime-local" required />
+        <input type="hidden" name="closesAt" value={localInputToIso(closesAtLocal)} />
+        <Input
+          id="closesAt"
+          type="datetime-local"
+          value={closesAtLocal}
+          onChange={(e) => setClosesAtLocal(e.target.value)}
+          required
+        />
       </div>
       <Button type="submit" disabled={pending} className="w-fit">
         {pending ? "Creating…" : "Create market"}

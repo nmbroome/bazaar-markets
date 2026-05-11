@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import { updateMarketAction, type AdminActionState } from "@/app/admin/_actions";
 import { Button } from "@/components/ui/button";
@@ -24,8 +24,17 @@ function toLocalInputValue(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// datetime-local has no timezone. Re-anchor it in the browser's TZ and emit ISO
+// so the server doesn't reinterpret the wall-clock time in its own timezone.
+function localInputToIso(local: string): string {
+  if (!local) return "";
+  const d = new Date(local);
+  return Number.isNaN(d.getTime()) ? "" : d.toISOString();
+}
+
 export function EditMarketForm({ marketId, question, description, closesAt }: EditMarketFormProps) {
   const [state, formAction, pending] = useActionState(updateMarketAction, initial);
+  const [closesAtLocal, setClosesAtLocal] = useState(() => toLocalInputValue(closesAt));
   return (
     <details className="border-t pt-3">
       <summary className="text-xs cursor-pointer select-none text-muted-foreground hover:text-foreground">
@@ -54,11 +63,12 @@ export function EditMarketForm({ marketId, question, description, closesAt }: Ed
         </div>
         <div className="flex flex-col gap-1">
           <Label htmlFor={`c-${marketId}`} className="text-xs">Closes at</Label>
+          <input type="hidden" name="closesAt" value={localInputToIso(closesAtLocal)} />
           <Input
             id={`c-${marketId}`}
-            name="closesAt"
             type="datetime-local"
-            defaultValue={toLocalInputValue(closesAt)}
+            value={closesAtLocal}
+            onChange={(e) => setClosesAtLocal(e.target.value)}
             required
           />
         </div>

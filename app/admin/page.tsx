@@ -73,7 +73,7 @@ async function AdminMarketsList() {
   return (
     <>
       <Section title="Awaiting resolution" rows={closed} editable resolvable />
-      <Section title="Open" rows={open} editable cancellable />
+      <Section title="Open" rows={open} editable cancellable closeEarly />
       <Section title="Resolved / cancelled" rows={terminal} />
     </>
   );
@@ -85,12 +85,14 @@ function Section({
   resolvable = false,
   editable = false,
   cancellable = false,
+  closeEarly = false,
 }: {
   title: string;
   rows: Row[];
   resolvable?: boolean;
   editable?: boolean;
   cancellable?: boolean;
+  closeEarly?: boolean;
 }) {
   if (rows.length === 0) return null;
   return (
@@ -135,6 +137,7 @@ function Section({
                   />
                 )}
                 {resolvable && <ResolveMarketForm marketId={m.id} />}
+                {closeEarly && <ResolveMarketForm marketId={m.id} mode="collapsible" />}
                 {cancellable && <CancelMarketButton marketId={m.id} question={m.question} />}
               </CardContent>
             </Card>

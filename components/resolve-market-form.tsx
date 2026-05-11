@@ -9,10 +9,17 @@ import { Label } from "@/components/ui/label";
 
 const initial: AdminActionState = { ok: false };
 
-export function ResolveMarketForm({ marketId }: { marketId: string }) {
+export function ResolveMarketForm({
+  marketId,
+  mode = "default",
+}: {
+  marketId: string;
+  mode?: "default" | "collapsible";
+}) {
   const [state, formAction, pending] = useActionState(resolveMarketAction, initial);
-  return (
-    <form action={formAction} className="flex flex-col gap-2 border-t pt-3">
+  const collapsible = mode === "collapsible";
+  const form = (
+    <form action={formAction} className={`flex flex-col gap-2 ${collapsible ? "mt-3" : "border-t pt-3"}`}>
       <input type="hidden" name="marketId" value={marketId} />
       <div className="flex flex-col gap-1">
         <Label htmlFor={`reason-${marketId}`} className="text-xs">Reason (optional)</Label>
@@ -56,5 +63,15 @@ export function ResolveMarketForm({ marketId }: { marketId: string }) {
         </p>
       )}
     </form>
+  );
+
+  if (!collapsible) return form;
+  return (
+    <details className="border-t pt-3">
+      <summary className="text-xs cursor-pointer select-none text-muted-foreground hover:text-foreground">
+        Close early & resolve
+      </summary>
+      {form}
+    </details>
   );
 }
