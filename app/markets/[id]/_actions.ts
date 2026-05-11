@@ -71,6 +71,8 @@ function friendlyError(raw: string): string {
       return "Market not found.";
     case "invalid_outcome":
       return "Invalid outcome.";
+    case "outcome_locked":
+      return "You've already predicted on the other side of this market.";
     default:
       return raw;
   }

@@ -15,7 +15,7 @@ import {
   totalRealPool,
 } from "@/lib/markets";
 import { createClient } from "@/lib/supabase/server";
-import type { Market, MarketPool, Prediction } from "@/lib/types";
+import type { Market, MarketPool, Outcome, Prediction } from "@/lib/types";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -73,6 +73,7 @@ async function MarketDetail({ params }: { params: Promise<{ id: string }> }) {
   let userBalance = 0;
   let userPredictions: Prediction[] = [];
   let userTotalOnMarket = 0;
+  let userLockedOutcome: Outcome | null = null;
   if (userId) {
     const [{ data: profile }, { data: preds }] = await Promise.all([
       supabase.from("profiles").select("token_balance").eq("id", userId).maybeSingle(),
@@ -86,6 +87,7 @@ async function MarketDetail({ params }: { params: Promise<{ id: string }> }) {
     userBalance = Number(profile?.token_balance ?? 0);
     userPredictions = (preds ?? []) as Prediction[];
     userTotalOnMarket = userPredictions.reduce((acc, p) => acc + Number(p.amount), 0);
+    userLockedOutcome = userPredictions[0]?.outcome ?? null;
   }
 
   const probs = displayProbabilities(market, safePool);
@@ -106,6 +108,24 @@ async function MarketDetail({ params }: { params: Promise<{ id: string }> }) {
         <p className="text-xs text-muted-foreground">
           {market.status === "open" ? "Closes" : "Closed"} {new Date(market.closes_at).toLocaleString()}
         </p>
+        {market.winning_outcome && (
+          <div
+            className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium ${
+              market.winning_outcome === "yes"
+                ? "border-emerald-600/40 bg-emerald-600/10 text-emerald-700 dark:text-emerald-400"
+                : "border-rose-600/40 bg-rose-600/10 text-rose-700 dark:text-rose-400"
+            }`}
+          >
+            <span className="text-xs uppercase tracking-wide opacity-70">Outcome</span>
+            <span>{market.winning_outcome.toUpperCase()} won</span>
+          </div>
+        )}
+        {market.status === "cancelled" && !market.winning_outcome && (
+          <div className="flex items-center gap-2 rounded-md border border-muted-foreground/30 bg-muted px-3 py-2 text-sm font-medium text-muted-foreground">
+            <span className="text-xs uppercase tracking-wide opacity-70">Outcome</span>
+            <span>Cancelled &mdash; predictions refunded</span>
+          </div>
+        )}
       </header>
 
       <Card>
@@ -157,6 +177,7 @@ async function MarketDetail({ params }: { params: Promise<{ id: string }> }) {
                 pool={safePool}
                 userBalance={userBalance}
                 userTotalOnMarket={userTotalOnMarket}
+                userLockedOutcome={userLockedOutcome}
               />
             )}
           </CardContent>

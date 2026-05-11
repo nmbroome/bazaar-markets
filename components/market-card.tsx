@@ -39,9 +39,23 @@ export function MarketCard({ market, pool }: MarketCardProps) {
         <CardHeader>
           <div className="flex items-start justify-between gap-4">
             <CardTitle className="text-base leading-snug">{market.question}</CardTitle>
-            <Badge variant={statusVariant[market.status]} className="capitalize shrink-0">
-              {market.status}
-            </Badge>
+            <div className="flex flex-col items-end gap-1 shrink-0">
+              <Badge variant={statusVariant[market.status]} className="capitalize">
+                {market.status}
+              </Badge>
+              {market.winning_outcome && (
+                <Badge
+                  variant="outline"
+                  className={
+                    market.winning_outcome === "yes"
+                      ? "border-emerald-600/50 text-emerald-700 dark:text-emerald-400"
+                      : "border-rose-600/50 text-rose-700 dark:text-rose-400"
+                  }
+                >
+                  {market.winning_outcome.toUpperCase()} won
+                </Badge>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">

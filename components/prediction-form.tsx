@@ -15,13 +15,21 @@ interface PredictionFormProps {
   pool: Pick<MarketPool, "yes_pool" | "no_pool">;
   userBalance: number;
   userTotalOnMarket: number;
+  userLockedOutcome: Outcome | null;
 }
 
 const initialState: PlacePredictionState = { ok: false };
 
-export function PredictionForm({ market, pool, userBalance, userTotalOnMarket }: PredictionFormProps) {
+export function PredictionForm({
+  market,
+  pool,
+  userBalance,
+  userTotalOnMarket,
+  userLockedOutcome,
+}: PredictionFormProps) {
   const [state, formAction, pending] = useActionState(placePredictionAction, initialState);
-  const [outcome, setOutcome] = useState<Outcome>("yes");
+  const [outcome, setOutcome] = useState<Outcome>(userLockedOutcome ?? "yes");
+  const locked = userLockedOutcome !== null;
   const [amount, setAmount] = useState<number>(ECONOMY_CONFIG.MIN_PREDICTION_AMOUNT);
   const [idempotencyKey, setIdempotencyKey] = useState<string>("");
 
@@ -62,6 +70,7 @@ export function PredictionForm({ market, pool, userBalance, userTotalOnMarket }:
           type="button"
           variant={outcome === "yes" ? "default" : "outline"}
           onClick={() => setOutcome("yes")}
+          disabled={locked && userLockedOutcome !== "yes"}
           className={outcome === "yes" ? "bg-emerald-600 hover:bg-emerald-600/90 text-white" : ""}
         >
           YES
@@ -70,11 +79,17 @@ export function PredictionForm({ market, pool, userBalance, userTotalOnMarket }:
           type="button"
           variant={outcome === "no" ? "default" : "outline"}
           onClick={() => setOutcome("no")}
+          disabled={locked && userLockedOutcome !== "no"}
           className={outcome === "no" ? "bg-rose-600 hover:bg-rose-600/90 text-white" : ""}
         >
           NO
         </Button>
       </div>
+      {locked && (
+        <p className="text-xs text-muted-foreground -mt-2">
+          You&apos;re locked into {userLockedOutcome?.toUpperCase()} on this market.
+        </p>
+      )}
 
       <div className="flex flex-col gap-1">
         <Label htmlFor="amount">Amount (gold)</Label>
