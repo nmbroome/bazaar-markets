@@ -21,8 +21,7 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-export default async function MarketDetailPage({ params }: PageProps) {
-  const { id } = await params;
+export default function MarketDetailPage({ params }: PageProps) {
   return (
     <SiteShell>
       <div className="flex flex-col gap-6 py-8">
@@ -30,7 +29,7 @@ export default async function MarketDetailPage({ params }: PageProps) {
           &larr; All markets
         </Link>
         <Suspense fallback={<DetailLoading />}>
-          <MarketDetail id={id} />
+          <MarketDetail params={params} />
         </Suspense>
       </div>
     </SiteShell>
@@ -41,7 +40,8 @@ function DetailLoading() {
   return <div className="text-sm text-muted-foreground">Loading market…</div>;
 }
 
-async function MarketDetail({ id }: { id: string }) {
+async function MarketDetail({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const supabase = await createClient();
 
   const { data: market } = await supabase
